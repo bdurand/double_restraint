@@ -3,7 +3,6 @@
 require "restrainer"
 
 class DoubleRestraint
-
   def initialize(name, timeout:, limit:, long_running_timeout:, long_running_limit:, timeout_errors: [TimeoutError], redis: nil)
     @timeout = timeout
     @long_running_timeout = long_running_timeout
@@ -17,7 +16,7 @@ class DoubleRestraint
       @restrainer.throttle do
         yield @timeout
       end
-    rescue StandardError => e
+    rescue => e
       if @timeout_errors.any? { |error_class| e.is_a?(error_class) }
         @long_running_restrainer.throttle do
           yield @long_running_timeout
