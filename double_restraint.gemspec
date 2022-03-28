@@ -1,10 +1,10 @@
 Gem::Specification.new do |spec|
   spec.name = "double_restraint"
-  spec.version = File.read(File.expand_path("../VERSION", __FILE__)).strip
+  spec.version = File.read(File.expand_path("VERSION", __dir__)).strip
   spec.authors = ["Brian Durand"]
   spec.email = ["bbdurand@gmail.com"]
 
-  spec.summary = "Throttling mechanism to prevent a slow running external service from taking down your system."
+  spec.summary = "Throttling mechanism for safely dealing with external resources so that latency does not take down your application."
   spec.homepage = "https://github.com/bdurand/double_restraint"
   spec.license = "MIT"
 
