@@ -26,7 +26,7 @@ end
 
 However, this can lead to problems if you set the limit too low. You could end up in a situation where peak traffic sends more requests than the limit you set. This will end up artificially limiting the external calls and returning errors to users.
 
-This gem combines both solutions and lets you set two levels of timeouts and a limit on how many concurrent requests can be using the longer timeout. You can more aggressive with both your fail fast timeout and the limit on concurrent processes without affecting requests in a health system.
+This gem combines both solutions and lets you set two levels of timeouts and a limit on how many concurrent requests can use the longer timeout. You can be more aggressive with both your fail fast timeout and the limit on concurrent processes without affecting requests in a health system.
 
 ```ruby
 restraint = DoubleRestraint.new("MyWebService", timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
@@ -49,13 +49,13 @@ The effect of this is that if there are latency issues in `MyWebService`, then t
 
 The `execute` block **must** be idempotent since it can be run twice by one call to `execute`.
 
-You can also set a restraint on the initial execution by specifying the `limit` parameter.
+You can also set a restraint on the initial execution with the lower timeout by specifying the `limit` parameter.
 
 ```ruby
 restraint = DoubleRestraint.new("MyWebService", limit: 50, timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
 ```
 
-By default, a timeout is identified by any error that inherits from `Timeout::Error`. You may need to specify what constitutes a timeout error in your block of code, though. For instance, if you code uses Faraday to make an HTTP request.
+By default, a timeout is identified by any error that inherits from `Timeout::Error`. You may need to specify what constitutes a timeout error in your block of code, though. For instance, if you code uses Faraday to make an HTTP requests, then you would need to specify that timeouts are identified by `Faraday::TimeoutError`.
 
 ```ruby
 restraint = DoubleRestraint.new("MyWebService", timeout_errors: [Faraday::TimeoutError], timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
@@ -92,7 +92,7 @@ $ bundle
 
 Or install it yourself as:
 ```bash
-$ gem install simple_apm
+$ gem install double_restraint
 ```
 
 ## Contributing
