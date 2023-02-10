@@ -45,8 +45,8 @@ describe DoubleRestraint do
   it "should restrain the number of long running processes" do
     threads = []
     begin
-      threads << Thread.new { restraint.execute { |timeout| timeout == 1 ? raise(Timeout::Error) : sleep(0.1) } }
-      threads << Thread.new { restraint.execute { |timeout| timeout == 1 ? raise(Timeout::Error) : sleep(0.1) } }
+      threads << Thread.new { restraint.execute { |timeout| (timeout == 1) ? raise(Timeout::Error) : sleep(0.1) } }
+      threads << Thread.new { restraint.execute { |timeout| (timeout == 1) ? raise(Timeout::Error) : sleep(0.1) } }
       sleep(0.05)
       expect { restraint.execute { |timeout| raise Timeout::Error if timeout == 1 } }.to raise_error(Restrainer::ThrottledError)
     ensure
@@ -66,5 +66,47 @@ describe DoubleRestraint do
       raise ArgumentError if timeouts.size == 1
     end
     expect(timeouts).to eq [1, 3]
+  end
+
+  it "should detect if a timeout represents the long running timeout" do
+    expect(restraint.long_running?(1)).to eq false
+    expect(restraint.long_running?(3)).to eq true
+  end
+
+  it "should expose the pool timeouts" do
+    expect(restraint.timeout).to eq 1
+    expect(restraint.long_running_timeout).to eq 3
+  end
+
+  it "should expose the pool limits" do
+    expect(restraint.default_pool_limit).to eq 3
+    expect(restraint.long_running_pool_limit).to eq 2
+  end
+
+  it "should expose the number of running processes" do
+    expect(restraint.default_pool_size).to eq 0
+    expect(restraint.long_running_pool_size).to eq 0
+
+    restraint.execute do |_timeout|
+      expect(restraint.default_pool_size).to eq 1
+      expect(restraint.long_running_pool_size).to eq 0
+
+      restraint.execute do |timeout|
+        if restraint.long_running?(timeout)
+          expect(restraint.long_running_pool_size).to eq 1
+          expect(restraint.default_pool_size).to eq 1
+          raise Timeout::Error
+        else
+          expect(restraint.long_running_pool_size).to eq 0
+          expect(restraint.default_pool_size).to eq 2
+        end
+      end
+
+      expect(restraint.default_pool_size).to eq 1
+      expect(restraint.long_running_pool_size).to eq 0
+    end
+
+    expect(restraint.default_pool_size).to eq 0
+    expect(restraint.long_running_pool_size).to eq 0
   end
 end
