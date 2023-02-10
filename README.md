@@ -77,6 +77,8 @@ However, you can also specify the Redis instance directly on the `DoubleRestrain
 restraint = DoubleRestraint.new("MyWebService", redis: Redis.new(url: redis_url)), timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
 ```
 
+You can peek at the current pool sizes as well if
+
 ## Installation
 
 Add this line to your application's Gemfile:
