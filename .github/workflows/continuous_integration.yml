@@ -41,4 +41,4 @@ jobs:
       - name: specs
         run:  bundle exec rake spec
       - name: standardrb
-        run:  bundle exec standardrb
+        run:  bundle exec rake standard
