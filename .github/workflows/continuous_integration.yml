@@ -34,11 +34,11 @@ jobs:
       - name: set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 2.5
-      - name: setup bundler
+          ruby-version: 2.7
+      - name: Install bundler
         run: |
           bundle update
-      - name: specs
+      - name: Run specs
         run:  bundle exec rake spec
-      - name: standardrb
-        run:  bundle exec standardrb --version && bundle exec rake standard
+      - name: Run standardrb
+        run:  bundle exec rake standard
