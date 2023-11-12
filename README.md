@@ -3,6 +3,7 @@
 [![Continuous Integration](https://github.com/bdurand/double_restraint/actions/workflows/continuous_integration.yml/badge.svg)](https://github.com/bdurand/double_restraint/actions/workflows/continuous_integration.yml)
 [![Regression Test](https://github.com/bdurand/double_restraint/actions/workflows/regression_test.yml/badge.svg)](https://github.com/bdurand/double_restraint/actions/workflows/regression_test.yml)
 [![Ruby Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://github.com/testdouble/standard)
+[![Gem Version](https://badge.fury.io/rb/double_restraint.svg)](https://badge.fury.io/rb/double_restraint)
 
 This gem implements a pattern for interacting with external services in a way that prevents performance issues with those services from taking down your application. It builds atop the [restrainer gem](https://github.com/weheartit/restrainer) which requires a Redis server to coordinate processes.
 
