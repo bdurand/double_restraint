@@ -5,7 +5,7 @@
 [![Ruby Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://github.com/testdouble/standard)
 [![Gem Version](https://badge.fury.io/rb/double_restraint.svg)](https://badge.fury.io/rb/double_restraint)
 
-This gem implements a pattern for interacting with external services in a way that prevents performance issues with those services from taking down your application. It builds atop the [restrainer gem](https://github.com/weheartit/restrainer) which requires a Redis server to coordinate processes.
+This gem implements a pattern for interacting with external services in a way that prevents performance issues with those services from taking down your application. It builds atop the [restrainer gem](https://github.com/bdurand/restrainer) which requires a Redis server to coordinate processes.
 
 ## Usage
 
@@ -13,7 +13,7 @@ Suppose you have a web application that calls a web service for something, and a
 
 If the external service uses timeouts, you could mitigate the issue of locking up your application by setting a low timeout so that requests to the sevice fail fast. However, if some requests to the service take just a little longer even in a health system, then you will be artificially preventing these requests from succeeding.
 
-With the [restrainer gem](https://github.com/weheartit/restrainer) you can throttle the number of concurrent requests to a service so that, if there is a problem with that service, only a limited number of application threads would be affected:
+With the [restrainer gem](https://github.com/bdurand/restrainer) you can throttle the number of concurrent requests to a service so that, if there is a problem with that service, only a limited number of application threads would be affected:
 
 ```ruby
 restrainer = Restrainer.new("MyWebService", limit: 10)
@@ -63,7 +63,7 @@ By default, a timeout is identified by any error that inherits from `Timeout::Er
 restraint = DoubleRestraint.new("MyWebService", timeout_errors: [Faraday::TimeoutError], timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
 ```
 
-Finally, you need to specify the Redis instance to use. By default this uses the value specified for the [restrainer gem](https://github.com/weheartit/restrainer).
+Finally, you need to specify the Redis instance to use. By default this uses the value specified for the [restrainer gem](https://github.com/bdurand/restrainer).
 
 ```ruby
 # set the global Redis instance
