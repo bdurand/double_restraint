@@ -18,7 +18,7 @@ With the [restrainer gem](https://github.com/bdurand/restrainer) you can throttl
 ```ruby
 restrainer = Restrainer.new("MyWebService", limit: 10)
 begin
-  restainer.throttle do
+  restrainer.throttle do
     MyWebService.new.call(arguments)
   end
 rescue Restrainer::ThrottledError
@@ -79,7 +79,20 @@ However, you can also specify the Redis instance directly on the `DoubleRestrain
 restraint = DoubleRestraint.new("MyWebService", redis: Redis.new(url: redis_url)), timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
 ```
 
-You can peek at the current pool sizes as well if
+You can peek at the current pool sizes as well if you want:
+
+```ruby
+# Number of process currently using a slot in the default pool
+restraint.default_pool_size
+
+# Number of process currently using a slot in the long running pool
+restraint.long_running_pool_size
+
+# Get the percentage capacity being used as a whole
+total_pool_used = restraint.pool_size + restraint.long_running_pool_size
+total_pool_capacity = restraint.limit + restraint.long_running_limit
+total_pool_used.to_f / total_pool_capacity
+```
 
 ## Installation
 
