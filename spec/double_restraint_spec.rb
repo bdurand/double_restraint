@@ -42,6 +42,51 @@ describe DoubleRestraint do
     expect(timeouts).to eq [1, 3]
   end
 
+  it "should return the value of the block" do
+    retval = restraint.execute { |timeout| :done }
+    expect(retval).to eq :done
+  end
+
+  it "should return the value of the long running block if the first pass times out" do
+    calls = 0
+    retval = restraint.execute do |timeout|
+      calls += 1
+      raise Timeout::Error if calls == 1
+      :done
+    end
+    expect(retval).to eq :done
+  end
+
+  it "should not allow any executions if the limit is zero" do
+    restraint = DoubleRestraint.new(:test_zero_limit, limit: 0, timeout: 1, long_running_timeout: 3, long_running_limit: 2)
+    expect { restraint.execute { |timeout| } }.to raise_error(Restrainer::ThrottledError)
+  end
+
+  it "should not retry the block if a timeout error is raised by the restrainer itself" do
+    calls = 0
+    allow_any_instance_of(Restrainer).to receive(:release!).and_raise(Timeout::Error)
+    begin
+      expect {
+        restraint.execute { |timeout| calls += 1 }
+      }.to raise_error(Timeout::Error)
+      expect(calls).to eq 1
+    ensure
+      Restrainer.new("DoubleRestrainer(test)", limit: 3).clear!
+    end
+  end
+
+  it "should not retry the block if no timeout errors are defined" do
+    restraint = DoubleRestraint.new(:test, timeout: 1, long_running_timeout: 3, long_running_limit: 2, timeout_errors: nil)
+    calls = 0
+    expect {
+      restraint.execute do |timeout|
+        calls += 1
+        raise Timeout::Error
+      end
+    }.to raise_error(Timeout::Error)
+    expect(calls).to eq 1
+  end
+
   it "should restrain the number of long running processes" do
     threads = []
     begin

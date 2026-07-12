@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "timeout"
 require "restrainer"
 
 class DoubleRestraint
@@ -8,11 +9,11 @@ class DoubleRestraint
   # @param name [String, Symbol] The name of the restraint.
   # @param timeout [Numeric] The first timeout that will be yielded to the block.
   # @param long_running_timeout [Numeric] The timeout that will be yielded to the block if
-  #        the block times out the first time it is excuted.
-  # @param long_running_limit [Integer] The maximum number of times the block can be run
+  #        the block times out the first time it is executed.
+  # @param long_running_limit [Integer] The maximum number of concurrent executions of the block
   #        with the long running timeout across all processes.
-  # @param limit [Integer] The maximum of number of times the block can be run with the initial
-  #        timeout across all processes.
+  # @param limit [Integer] The maximum number of concurrent executions of the block with the
+  #        initial timeout across all processes. If this is nil, then no limit will be applied.
   # @param timeout_errors [Array<Module>] List of errors that will be considered a timeout.
   #        This needs to be customized depending on what the code in the block could throw to
   #        indicate a timeout has occurred.
@@ -22,9 +23,15 @@ class DoubleRestraint
     @timeout = timeout
     @long_running_timeout = long_running_timeout
     @timeout_errors = Array(timeout_errors)
-    limit = -1 if limit.to_i <= 0
-    @restrainer = Restrainer.new("DoubleRestrainer(#{name})", limit: limit, redis: redis)
-    @long_running_restrainer = Restrainer.new("DoubleRestrainer(#{name}).long_running", limit: long_running_limit, redis: redis)
+    limit = -1 if limit.nil?
+    # Slots in the underlying restrainers expire as a safeguard against orphaned locks,
+    # so the expiration must comfortably exceed the longest time a block can legitimately
+    # hold a slot.
+    restrainer_timeout = [60, long_running_timeout.to_f * 2].max
+    # The restrainer names use "DoubleRestrainer" rather than "DoubleRestraint" for
+    # backward compatibility with the Redis keys created by earlier versions of the gem.
+    @restrainer = Restrainer.new("DoubleRestrainer(#{name})", limit: limit, timeout: restrainer_timeout, redis: redis)
+    @long_running_restrainer = Restrainer.new("DoubleRestrainer(#{name}).long_running", limit: long_running_limit, timeout: restrainer_timeout, redis: redis)
   end
 
   # Execute a block of code. The block will be yielded with the timeout value. If the block raises
@@ -32,21 +39,28 @@ class DoubleRestraint
   # must be idempotent since it can be run twice.
   #
   # @yieldparam [Numeric] the timeout value to use in the block.
-  # @raise [Restrainer::ThrottleError] if too many concurrent processes are trying to use the restraint.
-  def execute(&block)
-    begin
-      @restrainer.throttle do
+  # @return [Object] the value returned by the block.
+  # @raise [Restrainer::ThrottledError] if too many concurrent processes are trying to use the restraint.
+  def execute
+    timed_out = false
+    result = @restrainer.throttle do
+      begin
         yield @timeout
-      end
-    rescue => e
-      if @timeout_errors.any? { |error_class| e.is_a?(error_class) }
-        @long_running_restrainer.throttle do
-          yield @long_running_timeout
-        end
-      else
-        raise e
+      rescue *@timeout_errors
+        # Just flag the timeout here so the retry happens after the throttle
+        # block exits and releases its slot in the default pool.
+        timed_out = true
+        nil
       end
     end
+
+    if timed_out
+      result = @long_running_restrainer.throttle do
+        yield @long_running_timeout
+      end
+    end
+
+    result
   end
 
   # Get the current size of the default pool. This can be useful in

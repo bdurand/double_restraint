@@ -9,9 +9,9 @@ This gem implements a pattern for interacting with external services in a way th
 
 ## Usage
 
-Suppose you have a web application that calls a web service for something, and at some point that web service starts to have latency issues and requests take several seconds to return. Eventually most your application threads will be be waiting on the web service and your application will be completely unresponsive.
+Suppose you have a web application that calls a web service for something, and at some point that web service starts to have latency issues and requests take several seconds to return. Eventually most of your application threads will be waiting on the web service and your application will be completely unresponsive.
 
-If the external service uses timeouts, you could mitigate the issue of locking up your application by setting a low timeout so that requests to the sevice fail fast. However, if some requests to the service take just a little longer even in a health system, then you will be artificially preventing these requests from succeeding.
+If the external service uses timeouts, you could mitigate the issue of locking up your application by setting a low timeout so that requests to the service fail fast. However, if some requests to the service take just a little longer even in a healthy system, then you will be artificially preventing these requests from succeeding.
 
 With the [restrainer gem](https://github.com/bdurand/restrainer) you can throttle the number of concurrent requests to a service so that, if there is a problem with that service, only a limited number of application threads would be affected:
 
@@ -28,7 +28,7 @@ end
 
 However, this can lead to problems if you set the limit too low. You could end up in a situation where peak traffic sends more requests than the limit you set. This will end up artificially limiting the external calls and returning errors to users.
 
-This gem combines both solutions and lets you set two levels of timeouts and a limit on how many concurrent requests can use the longer timeout. You can be more aggressive with both your fail fast timeout and the limit on concurrent processes without affecting requests in a health system.
+This gem combines both solutions and lets you set two levels of timeouts and a limit on how many concurrent requests can use the longer timeout. You can be more aggressive with both your fail fast timeout and the limit on concurrent processes without affecting requests in a healthy system.
 
 ```ruby
 restraint = DoubleRestraint.new("MyWebService", timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
@@ -42,12 +42,12 @@ end
 ```
 
 * The `timeout` value should be set to a low value that works for most requests in a healthy system.
-* The `long_running_timeout` value should be set to a higher value that works for all requests in a health system.
+* The `long_running_timeout` value should be set to a higher value that works for all requests in a healthy system.
 * The `long_running_limit` value is the maximum number of concurrent requests that are allowed using the higher timeout.
 
 The `execute` call will call the block with the `timeout` value. If the block raises a timeout error, then it will be called again with the `long_running_timeout` value inside a `Restrainer`. If there are too many concurrent requests, then a `Restrainer::ThrottledError` will be raised.
 
-The effect of this is that if there are latency issues in `MyWebService`, then the requests will fail fast. Only a handful of requests will be allowed to execute with the higher timeout value so the impact on the overall system will be very limited. On a healthy system, you shouldn't seen any artificially generated errors as long as your `timeout` is set properly.
+The effect of this is that if there are latency issues in `MyWebService`, then the requests will fail fast. Only a handful of requests will be allowed to execute with the higher timeout value so the impact on the overall system will be very limited. On a healthy system, you shouldn't see any artificially generated errors as long as your `timeout` is set properly.
 
 The `execute` block **must** be idempotent since it can be run twice by one call to `execute`.
 
@@ -76,21 +76,23 @@ Restrainer.redis{ connection_pool.redis }
 However, you can also specify the Redis instance directly on the `DoubleRestraint` instance.
 
 ```ruby
-restraint = DoubleRestraint.new("MyWebService", redis: Redis.new(url: redis_url)), timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
+restraint = DoubleRestraint.new("MyWebService", redis: Redis.new(url: redis_url), timeout: 0.5, long_running_timeout: 5.0, long_running_limit: 5)
 ```
 
 You can peek at the current pool sizes as well if you want:
 
 ```ruby
-# Number of process currently using a slot in the default pool
+# Number of processes currently using a slot in the default pool
 restraint.default_pool_size
 
-# Number of process currently using a slot in the long running pool
+# Number of processes currently using a slot in the long running pool
 restraint.long_running_pool_size
 
-# Get the percentage capacity being used as a whole
-total_pool_used = restraint.pool_size + restraint.long_running_pool_size
-total_pool_capacity = restraint.limit + restraint.long_running_limit
+# Get the percentage capacity being used as a whole. Note that this only
+# makes sense if a limit is set on the default pool (default_pool_limit
+# returns -1 when the pool is unlimited).
+total_pool_used = restraint.default_pool_size + restraint.long_running_pool_size
+total_pool_capacity = restraint.default_pool_limit + restraint.long_running_pool_limit
 total_pool_used.to_f / total_pool_capacity
 ```
 
