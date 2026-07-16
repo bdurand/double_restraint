@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "spec_helper"
+require "spec_helper"
 
-describe DoubleRestraint do
+RSpec.describe DoubleRestraint do
   let(:restraint) { DoubleRestraint.new(:test, limit: 3, timeout: 1, long_running_timeout: 3, long_running_limit: 2) }
 
   it "should pass the timeout to the block" do
