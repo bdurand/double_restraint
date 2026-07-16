@@ -44,14 +44,12 @@ class DoubleRestraint
   def execute
     timed_out = false
     result = @restrainer.throttle do
-      begin
-        yield @timeout
-      rescue *@timeout_errors
-        # Just flag the timeout here so the retry happens after the throttle
-        # block exits and releases its slot in the default pool.
-        timed_out = true
-        nil
-      end
+      yield @timeout
+    rescue *@timeout_errors
+      # Just flag the timeout here so the retry happens after the throttle
+      # block exits and releases its slot in the default pool.
+      timed_out = true
+      nil
     end
 
     if timed_out
