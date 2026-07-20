@@ -1,16 +1,27 @@
 # frozen_string_literal: true
 
+ENV["BUNDLE_GEMFILE"] ||= File.expand_path("../Gemfile", __dir__)
+
+require "bundler/setup" if File.exist?(ENV["BUNDLE_GEMFILE"])
+
+begin
+  require "simplecov"
+  SimpleCov.start do
+    add_filter ["/spec/"]
+  end
+rescue LoadError
+end
+
+Bundler.require(:default, :test)
+
 require_relative "../lib/double_restraint"
 
+Restrainer.redis = Redis.new
+
 RSpec.configure do |config|
-  config.run_all_when_everything_filtered = true
-  config.filter_run :focus
-
-  # Run specs in random order to surface order dependencies. If you find an
-  # order dependency and want to debug it, you can fix the order by providing
-  # the seed, which is printed after each run.
-  #     --seed 1234
-  config.order = "random"
-
-  Restrainer.redis = Redis.new
+  config.warnings = true
+  config.disable_monkey_patching!
+  config.default_formatter = "doc" if config.files_to_run.one?
+  config.order = :random
+  Kernel.srand config.seed
 end
